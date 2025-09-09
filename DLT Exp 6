@@ -1,0 +1,101 @@
+import numpy as np
+import matplotlib.pyplot as plt
+np.random.seed(42)
+X_base = np.array([[0,0],[0,1],[1,0],[1,1]], dtype=np.float64)
+y_base = np.array([0,1,1,0])  
+repeats = 500
+X = np.tile(X_base, (repeats, 1))
+y = np.tile(y_base, repeats)
+num_classes = 2
+Y = np.eye(num_classes)[y]
+layers = [2, 8, 8, 2]   
+lr = 0.1
+epochs = 5000
+print_every = 500
+def he_init(fan_in, fan_out):
+    return np.random.randn(fan_in, fan_out) * np.sqrt(2.0 / fan_in)
+def relu(z):
+    return np.maximum(0, z)
+def drelu(z):
+    return (z > 0).astype(z.dtype)
+def softmax(z):
+    z = z - np.max(z, axis=1, keepdims=True)  
+    exp = np.exp(z)
+    return exp / np.sum(exp, axis=1, keepdims=True)
+def cross_entropy(yhat, Y):
+    eps = 1e-9
+    return -np.mean(np.sum(Y * np.log(yhat + eps), axis=1))
+def accuracy(yhat, y):
+    return np.mean(np.argmax(yhat, axis=1) == y)
+params = {}
+for i in range(len(layers) - 1):
+    params[f"W{i+1}"] = he_init(layers[i], layers[i+1])
+    params[f"b{i+1}"] = np.zeros((1, layers[i+1]))
+def forward(X, params):
+    cache = {}
+    a = X
+    cache["a0"] = X
+    L = len(layers) - 1
+    for i in range(1, L):
+        z = a @ params[f"W{i}"] + params[f"b{i}"]
+        a = relu(z)
+        cache[f"z{i}"] = z
+        cache[f"a{i}"] = a
+    zL = a @ params[f"W{L}"] + params[f"b{L}"]
+    yhat = softmax(zL)
+    cache[f"z{L}"] = zL
+    cache["yhat"] = yhat
+    return yhat, cache
+def backward(Y, cache, params):
+    grads = {}
+    L = len(layers) - 1
+    yhat = cache["yhat"]
+    N = Y.shape[0]
+    dz = (yhat - Y) / N
+    a_prev = cache[f"a{L-1}"]
+    grads[f"dW{L}"] = a_prev.T @ dz
+    grads[f"db{L}"] = np.sum(dz, axis=0, keepdims=True)
+    da_prev = dz @ params[f"W{L}"].T
+    for i in range(L-1, 0, -1):
+        z = cache[f"z{i}"]
+        dz = da_prev * drelu(z)
+        a_prev = cache["a0"] if i == 1 else cache[f"a{i-1}"]
+        grads[f"dW{i}"] = a_prev.T @ dz
+        grads[f"db{i}"] = np.sum(dz, axis=0, keepdims=True)
+        if i > 1:
+            da_prev = dz @ params[f"W{i}"].T
+    return grads
+losses = []
+accuracies = []
+epochs_list = []
+for epoch in range(1, epochs + 1):
+    yhat, cache = forward(X, params)
+    Ls = cross_entropy(yhat, Y)
+    grads = backward(Y, cache, params)
+    for k in params:
+        params[k] -= lr * grads["d" + k]
+    if epoch % print_every == 0:
+        acc = accuracy(yhat, y)
+        losses.append(Ls)
+        accuracies.append(acc)
+        epochs_list.append(epoch)
+        print(f"Epoch {epoch:4d} | loss={Ls:.6f} | acc={acc:.4f}")
+yhat, _ = forward(X, params)
+print("\nFinal accuracy:", accuracy(yhat, y))
+print("Sample predictions (first 8):", np.argmax(yhat[:8], axis=1))
+print("Sample truths     (first 8):", y[:8])
+plt.figure(figsize=(12,5))
+plt.subplot(1,2,1)
+plt.plot(epochs_list, losses, marker='o')
+plt.title('Training Loss over Epochs')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.grid(True)
+plt.subplot(1,2,2)
+plt.plot(epochs_list, accuracies, marker='o', color='green')
+plt.title('Training Accuracy over Epochs')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.ylim([0, 1.05])
+plt.grid(True)
+plt.show()
