@@ -1,0 +1,72 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten
+
+# -------------------------------
+# 1. Define activation functions
+# -------------------------------
+def sigmoid(x): return 1 / (1 + np.exp(-x))
+def tanh(x): return np.tanh(x)
+def relu(x): return np.maximum(0, x)
+def leaky_relu(x): return np.where(x > 0, x, 0.01*x)
+def elu(x, alpha=1.0): return np.where(x > 0, x, alpha*(np.exp(x)-1))
+
+x = np.linspace(-6, 6, 400)
+
+# Plot activation function curves
+plt.figure(figsize=(12, 8))
+plt.subplot(2,3,1); plt.plot(x, sigmoid(x)); plt.title("Sigmoid")
+plt.subplot(2,3,2); plt.plot(x, tanh(x)); plt.title("Tanh")
+plt.subplot(2,3,3); plt.plot(x, relu(x)); plt.title("ReLU")
+plt.subplot(2,3,4); plt.plot(x, leaky_relu(x)); plt.title("Leaky ReLU")
+plt.subplot(2,3,5); plt.plot(x, elu(x)); plt.title("ELU")
+plt.tight_layout()
+plt.show()
+
+# -------------------------------
+# 2. Load Dataset
+# -------------------------------
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+x_train, x_test = x_train/255.0, x_test/255.0
+
+# -------------------------------
+# 3. Build model function
+# -------------------------------
+def build_model(activation):
+    model = Sequential([
+        Flatten(input_shape=(28,28)),
+        Dense(128, activation=activation),
+        Dense(64, activation=activation),
+        Dense(10, activation="softmax")
+    ])
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+    return model
+
+# -------------------------------
+# 4. Train with different activations
+# -------------------------------
+activations = ['sigmoid', 'tanh', 'relu', 'elu']
+results = {}
+
+for act in activations:
+    print(f"\nTraining with {act} activation...")
+    model = build_model(act)
+    model.fit(x_train, y_train, epochs=2, batch_size=128, verbose=0)
+    loss, acc = model.evaluate(x_test, y_test, verbose=0)
+    results[act] = acc
+
+# -------------------------------
+# 5. Plot comparison chart
+# -------------------------------
+plt.figure(figsize=(8,5))
+plt.bar(results.keys(), results.values(), color=['blue','green','red','orange'])
+plt.title("Accuracy with Different Activation Functions")
+plt.ylabel("Accuracy")
+plt.show()
+
+# Print results
+print("\nFinal Results:")
+for act, acc in results.items():
+    print(f"{act}: {acc*100:.2f}%")
