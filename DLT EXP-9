@@ -1,0 +1,54 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import SimpleRNN, Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+x = np.linspace(0, 100, 1000)
+y = np.sin(x)
+seq_length = 20
+X, Y = [], []
+for i in range(len(y) - seq_length):
+    X.append(y[i:i+seq_length])
+    Y.append(y[i+seq_length])
+X = np.array(X)
+Y = np.array(Y)
+X = X.reshape((X.shape[0], X.shape[1], 1))
+split = int(0.8 * len(X))
+X_train, X_test = X[:split], X[split:]
+y_train, y_test = Y[:split], Y[split:]
+model = Sequential([
+    SimpleRNN(100, activation='tanh', input_shape=(seq_length, 1), return_sequences=True),
+    Dropout(0.2),
+    SimpleRNN(50, activation='tanh'),
+    Dense(1)
+])
+model.compile(optimizer=Adam(learning_rate=0.001), loss='mse')
+history = model.fit(
+    X_train, y_train,
+    epochs=30,
+    batch_size=32,
+    validation_split=0.1,
+    verbose=1
+)
+y_pred = model.predict(X_test)
+mse = mean_squared_error(y_test, y_pred)
+rmse = np.sqrt(mse)
+print(f"Mean Squared Error (MSE): {mse:.5f}")
+print(f"Root Mean Squared Error (RMSE): {rmse:.5f}")
+plt.figure(figsize=(10,5))
+plt.plot(y_test, label='Actual', color='blue')
+plt.plot(y_pred, label='Predicted (RNN)', color='orange')
+plt.title('RNN Prediction on Sine Wave Data')
+plt.xlabel('Time Step')
+plt.ylabel('Value')
+plt.legend()
+plt.show()
+plt.figure(figsize=(8,4))
+plt.plot(history.history['loss'], label='Training Loss', color='red')
+plt.plot(history.history['val_loss'], label='Validation Loss', color='green')
+plt.title('Model Training History')
+plt.xlabel('Epoch')
+plt.ylabel('MSE Loss')
+plt.legend()
+plt.show()
