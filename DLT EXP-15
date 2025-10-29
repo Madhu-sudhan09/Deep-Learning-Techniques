@@ -1,0 +1,22 @@
+from ultralytics import YOLO
+import cv2
+
+# Step 1: Load a pre-trained YOLO model (v8 nano - fast and small)
+model = YOLO('yolov8n.pt')
+
+# Step 2: Load your image (you must have an image in the same folder)
+img_path = '/content/IMG-20250523-WA0017.jpg'   # <-- replace this with your image filename
+
+# Step 3: Perform object detection
+results = model(img_path)
+
+# Step 4: Display detected objects
+# Iterate through the results list and show each result
+for r in results:
+    r.show()   # Opens a window with bounding boxes
+
+# Step 5: Print detected class names in console
+print("\nDetected Objects:")
+for r in results:
+    for c in r.boxes.cls:
+        print(model.names[int(c)])
