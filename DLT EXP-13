@@ -1,0 +1,22 @@
+# lab13_pretrained_model_architecture.py
+import torch
+import torchvision.models as models
+
+# Load a pretrained model (VGG16)
+model = models.vgg16(pretrained=True)
+
+# Print model architecture
+print("===== VGG16 Pre-trained Model Architecture =====")
+print(model)
+
+# Print only feature extractor part
+print("\n===== Feature Extractor Layers =====")
+print(model.features)
+
+# Print classifier part
+print("\n===== Classifier Layers =====")
+print(model.classifier)
+
+# Print total trainable parameters
+total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"\nTotal Trainable Parameters: {total_params}")
